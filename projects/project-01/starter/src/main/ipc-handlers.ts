@@ -1,4 +1,4 @@
-import { IpcMain } from 'electron';
+import { IpcMain, BrowserWindow, dialog } from 'electron';
 import { DocumentService } from '../services/document-service';
 import { IndexingService } from '../services/indexing-service';
 import { QaService } from '../services/qa-service';
@@ -8,10 +8,11 @@ export interface Services {
   documentService: DocumentService;
   indexingService: IndexingService;
   qaService: QaService;
+  getMainWindow: () => BrowserWindow | null;
 }
 
 export function registerIpcHandlers(ipcMain: IpcMain, services: Services) {
-  const { documentService, indexingService, qaService } = services;
+  const { documentService, indexingService, qaService, getMainWindow } = services;
 
   // Document operations
   ipcMain.handle(IPC_CHANNELS.LIST_DOCUMENTS, async () => {
@@ -50,5 +51,23 @@ export function registerIpcHandlers(ipcMain: IpcMain, services: Services) {
 
   ipcMain.handle(IPC_CHANNELS.GET_HISTORY, async () => {
     return qaService.getHistory();
+  });
+
+  // Dialog
+  ipcMain.handle(IPC_CHANNELS.OPEN_FILE_DIALOG, async (): Promise<string | null> => {
+    const win = getMainWindow();
+    const options = {
+      title: 'Import Document',
+      properties: ['openFile' as const],
+      filters: [
+        { name: 'Text Documents', extensions: ['txt', 'md', 'markdown'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+    };
+    const result = win
+      ? await dialog.showOpenDialog(win, options)
+      : await dialog.showOpenDialog(options);
+    if (result.canceled || result.filePaths.length === 0) return null;
+    return result.filePaths[0];
   });
 }

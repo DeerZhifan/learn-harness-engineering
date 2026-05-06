@@ -11,13 +11,26 @@ declare global {
         delete: (id: string) => Promise<boolean>;
       };
       indexing: {
-        start: (documentId?: string) => Promise<import('../shared/types').AppStatus>;
-        status: () => Promise<import('../shared/types').AppStatus>;
+        start: (documentId?: string) => Promise<{
+          status: 'idle' | 'indexing' | 'ready' | 'error';
+          currentIndexed: number;
+          totalDocuments: number;
+          lastIndexed: string | null;
+        }>;
+        status: () => Promise<{
+          status: 'idle' | 'indexing' | 'ready' | 'error';
+          currentIndexed: number;
+          totalDocuments: number;
+          lastIndexed: string | null;
+        }>;
         chunks: (documentId: string) => Promise<import('../shared/types').Chunk[]>;
       };
       qa: {
         ask: (question: string) => Promise<import('../shared/types').QAResponse>;
         history: () => Promise<import('../shared/types').QAHistory[]>;
+      };
+      dialog: {
+        openFile: () => Promise<string | null>;
       };
     };
   }

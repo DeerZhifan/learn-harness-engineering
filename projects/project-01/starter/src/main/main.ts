@@ -8,6 +8,10 @@ import { PersistenceService } from '../services/persistence-service';
 
 let mainWindow: BrowserWindow | null = null;
 
+function getMainWindow(): BrowserWindow | null {
+  return mainWindow;
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -46,7 +50,10 @@ function initializeServices() {
     documentService,
     indexingService,
     qaService,
+    getMainWindow,
   });
+
+  console.log(`[main] Local data directory: ${dataDir}`);
 }
 
 app.whenReady().then(() => {

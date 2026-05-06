@@ -62,4 +62,7 @@ export const IPC_CHANNELS = {
 
   // App status
   GET_STATUS: 'app:status',
+
+  // Dialog
+  OPEN_FILE_DIALOG: 'dialog:openFile',
 } as const;

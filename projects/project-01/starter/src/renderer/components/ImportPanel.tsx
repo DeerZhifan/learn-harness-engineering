@@ -1,7 +1,5 @@
-import React from 'react';
-
 interface Props {
-  onImport: (filePath: string) => void;
+  onImport: () => void;
 }
 
 export function ImportPanel({ onImport }: Props) {
@@ -15,20 +13,23 @@ export function ImportPanel({ onImport }: Props) {
       color: '#888',
     }}>
       <div style={{ fontSize: '14px', marginBottom: '8px' }}>Import Documents</div>
-      <div style={{ fontSize: '12px' }}>
-        Use the import button or drag files here.
-        <br />
-        Supported: .txt, .md files
+      <div style={{ fontSize: '12px', marginBottom: '10px' }}>
+        Click below to choose a file. Supported: .txt, .md
       </div>
-      <input
-        type="file"
-        accept=".txt,.md"
-        onChange={e => {
-          const file = e.target.files?.[0];
-          if (file) onImport(file.path);
+      <button
+        onClick={onImport}
+        style={{
+          padding: '6px 14px',
+          background: '#533483',
+          color: '#fff',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          fontSize: '12px',
         }}
-        style={{ marginTop: '10px' }}
-      />
+      >
+        Choose File…
+      </button>
     </div>
   );
 }

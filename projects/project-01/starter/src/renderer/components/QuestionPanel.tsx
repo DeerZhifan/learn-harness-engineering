@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, FormEvent } from 'react';
 
 interface Props {
   onAsk: (question: string) => void;
@@ -7,7 +7,7 @@ interface Props {
 export function QuestionPanel({ onAsk }: Props) {
   const [question, setQuestion] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!question.trim()) return;
     onAsk(question.trim());
