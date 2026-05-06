@@ -27,3 +27,11 @@ docs/.vitepress/cache/
 docs/.vitepress/dist/
 *.tsbuildinfo
 artifacts/
+
+# Electron / TypeScript build outputs
+dist/
+build/
+out/
+.vite/
+.cache/
+.parcel-cache/
