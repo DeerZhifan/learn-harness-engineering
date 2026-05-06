@@ -1,31 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { DocumentList } from './components/DocumentList';
 import { QuestionPanel } from './components/QuestionPanel';
 import { DocumentDetail } from './components/DocumentDetail';
 import { StatusBar } from './components/StatusBar';
-import { Document, AppStatus, QAResponse } from '../../shared/types';
-
-declare global {
-  interface Window {
-    knowledgeBase: {
-      documents: {
-        list: () => Promise<Document[]>;
-        import: (filePath: string) => Promise<Document>;
-        get: (id: string) => Promise<Document | null>;
-        delete: (id: string) => Promise<boolean>;
-      };
-      indexing: {
-        start: (documentId?: string) => Promise<{ status: string }>;
-        status: () => Promise<AppStatus>;
-        chunks: (documentId: string) => Promise<Array<{ id: string; content: string; index: number }>>;
-      };
-      qa: {
-        ask: (question: string) => Promise<QAResponse>;
-        history: () => Promise<Array<{ question: string; response: QAResponse }>>;
-      };
-    };
-  }
-}
+import { Document, AppStatus, QAResponse, Citation } from '../shared/types';
 
 export function App() {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -41,12 +19,24 @@ export function App() {
     try {
       const docs = await window.knowledgeBase.documents.list();
       setDocuments(docs);
-      const status = await window.knowledgeBase.indexing.status();
-      setAppStatus(status);
+      const raw = await window.knowledgeBase.indexing.status() as unknown as {
+        status: AppStatus['indexStatus'];
+        totalDocuments: number;
+        lastIndexed: string | null;
+      };
+      setAppStatus({
+        documentsLoaded: raw.totalDocuments ?? docs.length,
+        indexStatus: raw.status ?? 'idle',
+        lastActivity: raw.lastIndexed ?? '',
+      });
     } catch (err) {
       console.error('Failed to refresh documents:', err);
     }
   }, []);
+
+  useEffect(() => {
+    refreshDocuments();
+  }, [refreshDocuments]);
 
   const handleImport = useCallback(async () => {
     // In a real app this would open a file dialog.
@@ -157,7 +147,7 @@ export function App() {
                 {lastResponse.citations.length > 0 && (
                   <div style={{ marginTop: '10px', fontSize: '12px', color: '#8888bb' }}>
                     <strong>Citations:</strong>
-                    {lastResponse.citations.map((c, i) => (
+                    {lastResponse.citations.map((c: Citation, i: number) => (
                       <div key={i} style={{ marginTop: '4px', paddingLeft: '8px', borderLeft: '2px solid #533483' }}>
                         {c.documentTitle} (chunk {c.chunkIndex}): {c.excerpt.substring(0, 100)}...
                       </div>
