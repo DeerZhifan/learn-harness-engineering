@@ -18,6 +18,9 @@ function createWindow() {
       preload: path.join(__dirname, '..', 'preload', 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      // Required: with default sandbox on Electron 33 / Windows, contextBridge
+      // exposes successfully but window.knowledgeBase is undefined at call time.
+      sandbox: false,
     },
     title: 'Knowledge Base',
   });
@@ -39,8 +42,8 @@ function initializeServices() {
   const dataDir = path.join(app.getPath('userData'), 'knowledge-base-data');
   const persistence = new PersistenceService(dataDir);
   const documentService = new DocumentService(persistence);
-  const indexingService = new IndexingService(persistence);
-  const qaService = new QaService(persistence);
+  const indexingService = new IndexingService(persistence, documentService);
+  const qaService = new QaService(persistence, indexingService);
 
   registerIpcHandlers(ipcMain, {
     documentService,

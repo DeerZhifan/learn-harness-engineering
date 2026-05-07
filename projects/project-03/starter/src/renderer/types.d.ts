@@ -10,6 +10,7 @@ declare global {
         get: (id: string) => Promise<import('../shared/types').Document | null>;
         getContent: (id: string) => Promise<string | null>;
         delete: (id: string) => Promise<boolean>;
+        pickFile: () => Promise<string | null>;
       };
       indexing: {
         start: (documentId?: string) => Promise<import('../shared/types').AppStatus>;

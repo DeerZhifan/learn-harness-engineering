@@ -1,10 +1,29 @@
-import React from 'react';
+import { useState } from 'react';
 
 interface Props {
   onImport: (filePath: string) => void;
 }
 
 export function ImportPanel({ onImport }: Props) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handlePick = async () => {
+    setError(null);
+    setBusy(true);
+    try {
+      const filePath = await window.knowledgeBase.documents.pickFile();
+      if (filePath) {
+        onImport(filePath);
+      }
+    } catch (err) {
+      console.error('File pick failed:', err);
+      setError(err instanceof Error ? err.message : 'Failed to open file picker');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div style={{
       padding: '20px',
@@ -14,21 +33,31 @@ export function ImportPanel({ onImport }: Props) {
       textAlign: 'center',
       color: '#888',
     }}>
-      <div style={{ fontSize: '14px', marginBottom: '8px' }}>Import Documents</div>
-      <div style={{ fontSize: '12px' }}>
-        Use the import button or drag files here.
-        <br />
+      <div style={{ fontSize: '14px', marginBottom: '8px', color: '#c0c0e0' }}>
+        Import Documents
+      </div>
+      <div style={{ fontSize: '12px', marginBottom: '12px' }}>
         Supported: .txt, .md files
       </div>
-      <input
-        type="file"
-        accept=".txt,.md"
-        onChange={e => {
-          const file = e.target.files?.[0];
-          if (file) onImport(file.path);
+      <button
+        type="button"
+        onClick={handlePick}
+        disabled={busy}
+        style={{
+          padding: '8px 18px',
+          background: '#533483',
+          color: '#fff',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: busy ? 'wait' : 'pointer',
+          fontSize: '13px',
         }}
-        style={{ marginTop: '10px' }}
-      />
+      >
+        {busy ? 'Opening...' : 'Choose File'}
+      </button>
+      {error && (
+        <div style={{ marginTop: '10px', fontSize: '12px', color: '#d9534f' }}>{error}</div>
+      )}
     </div>
   );
 }

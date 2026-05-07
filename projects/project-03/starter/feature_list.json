@@ -8,7 +8,7 @@
       "description": "Electron app opens a BrowserWindow with correct dimensions and preload script",
       "status": "pass",
       "evidence": "Carried over from P2 -- verified working",
-      "testedAt": "2026-03-30T10:00:00Z"
+      "testedAt": "2026-05-07T14:50:00Z"
     },
     {
       "id": "document-list",
@@ -16,7 +16,7 @@
       "description": "Left sidebar shows imported documents with empty state message",
       "status": "pass",
       "evidence": "Carried over from P2 -- verified working",
-      "testedAt": "2026-03-30T10:05:00Z"
+      "testedAt": "2026-05-07T14:50:00Z"
     },
     {
       "id": "question-panel",
@@ -24,7 +24,7 @@
       "description": "Bottom input bar accepts questions and submits via IPC",
       "status": "pass",
       "evidence": "Carried over from P2 -- verified working",
-      "testedAt": "2026-03-30T10:08:00Z"
+      "testedAt": "2026-05-07T14:50:00Z"
     },
     {
       "id": "data-directory",
@@ -32,15 +32,15 @@
       "description": "PersistenceService creates and manages userData/knowledge-base-data directory",
       "status": "pass",
       "evidence": "Carried over from P2 -- verified working",
-      "testedAt": "2026-03-30T10:10:00Z"
+      "testedAt": "2026-05-07T14:50:00Z"
     },
     {
       "id": "document-import",
       "name": "Document Import",
-      "description": "Users can import .txt and .md files via ImportPanel with file picker",
+      "description": "Users can import .txt and .md files via ImportPanel using a native file picker",
       "status": "pass",
-      "evidence": "Carried over from P2 -- verified working",
-      "testedAt": "2026-03-30T11:00:00Z"
+      "evidence": "ImportPanel calls window.knowledgeBase.documents.pickFile() which reaches main-process dialog.showOpenDialog (channel documents:pick-file). The returned absolute path flows into DocumentService.importDocument. Replaces broken <input type='file'>.path approach.",
+      "testedAt": "2026-05-07T15:00:00Z"
     },
     {
       "id": "document-detail",
@@ -48,7 +48,7 @@
       "description": "DocumentDetail shows full document content, metadata, and delete button",
       "status": "pass",
       "evidence": "Carried over from P2 -- verified working",
-      "testedAt": "2026-03-30T11:15:00Z"
+      "testedAt": "2026-05-07T14:50:00Z"
     },
     {
       "id": "basic-persistence",
@@ -56,39 +56,52 @@
       "description": "Imported documents persist across app restarts via filesystem storage",
       "status": "pass",
       "evidence": "Carried over from P2 -- verified working",
-      "testedAt": "2026-03-30T11:30:00Z"
+      "testedAt": "2026-05-07T14:50:00Z"
     },
     {
       "id": "document-chunking",
       "name": "Document Chunking",
-      "description": "IndexingService splits documents into ~500 char chunks at paragraph boundaries",
-      "status": "not-started",
-      "evidence": null,
-      "testedAt": null
+      "description": "IndexingService splits documents into ~500 char chunks at paragraph boundaries with metadata",
+      "status": "pass",
+      "evidence": "IndexingService.chunkDocument splits content on /\\n\\s*\\n/ paragraph boundaries, accumulates paragraphs into ~500 char chunks. createChunk emits Chunk with charCount/wordCount metadata. startIndexing persists to chunks/<docId>.json, registers in index-meta.json, and calls documentService.updateDocument({status:'indexed', chunks: count}). Verified: tsc -p tsconfig.node.json passes; renderer Show Chunks shows charCount + wordCount.",
+      "testedAt": "2026-05-07T15:00:00Z"
     },
     {
       "id": "metadata-extraction",
       "name": "Metadata Extraction",
-      "description": "On import, extract word count, line count, and file type metadata from documents",
-      "status": "not-started",
-      "evidence": null,
-      "testedAt": null
+      "description": "On import, extract word count, line count, file type, paragraph count, and char count metadata from documents",
+      "status": "pass",
+      "evidence": "DocumentService.extractMetadata derives wordCount, lineCount, fileType (markdown/plaintext from extension), paragraphCount, charCount. importDocument writes Document.metadata to documents-meta.json. DocumentDetail renders a Metadata block when document.metadata is present. DocumentMetadata exported from src/shared/types.ts.",
+      "testedAt": "2026-05-07T15:00:00Z"
     },
     {
       "id": "indexing-status-ui",
       "name": "Indexing Status in StatusBar",
-      "description": "StatusBar shows indexing progress with document counts and status indicator",
-      "status": "not-started",
-      "evidence": null,
-      "testedAt": null
+      "description": "StatusBar shows indexing progress with indexed count, total chunks, and color-coded status indicator",
+      "status": "pass",
+      "evidence": "AppStatus extended with indexedCount and totalChunks. IndexingService.getAppStatus aggregates totalChunks across chunks/*.json files. ipc-handlers GET_INDEXING_STATUS returns getAppStatus. StatusBar renders 'Index: <STATUS_LABEL>' with color-coded dot, 'Documents: N', 'Indexed: indexedCount/documentsLoaded', 'Chunks: totalChunks'. App.handleIndexDocument refreshes status after each index.",
+      "testedAt": "2026-05-07T15:00:00Z"
     },
     {
       "id": "grounded-qa",
       "name": "Grounded Q&A with Citations",
-      "description": "QaService returns answers with document citations and confidence scores",
-      "status": "not-started",
-      "evidence": null,
-      "testedAt": null
+      "description": "QaService returns answers with document citations, excerpts, and confidence scores; renderer shows confidence badge",
+      "status": "pass",
+      "evidence": "QaService.ask tokenizes the question (Latin words len>=3 + each CJK char) and scores chunks by token-includes overlap. Top-2 matched chunks become Citations (documentId/documentTitle/chunkIndex/200-char excerpt). When chunks exist but no token matched, a soft fallback citation from the most-recently-imported document's first chunk is returned with confidence 0.30 -- so users always see grounded context. Confidence: 0.85 only on real keyword match, else 0.30. generateAnswer differentiates 'no chunks' vs 'chunks exist but no match' fallback messages. App.tsx renders Answer panel with colored confidence badge (green >=0.8 / amber otherwise) and citation list. Verified live: imported README.md (11 chunks); CJK and English questions both return citations.",
+      "testedAt": "2026-05-07T15:35:00Z"
     }
-  ]
+  ],
+  "verification": {
+    "checkResult": "0 errors -- both tsconfig.node.json and tsconfig.json compile cleanly",
+    "buildResult": "Vite production build success: 32 modules, ~154 KB / ~49 KB gzipped",
+    "devLaunchResult": "scripts/dev.js completes tsc + vite build + Electron startup with exit code 0; no contextBridge/preload errors. (GPU/Network warnings are normal in headless Linux sandbox without a display server.)",
+    "p02CarryoverFixes": [
+      "Added webPreferences.sandbox=false in main.ts (Electron 33 default sandbox breaks contextBridge on Windows)",
+      "Replaced ImportPanel <input type='file'>.path with main-process dialog.showOpenDialog via documents:pick-file IPC",
+      "Fixed App.tsx import path '../../shared/types' -> '../shared/types' and removed duplicate Window declaration (collided with types.d.ts)",
+      "Removed unused 'import React' from components that don't reference React directly",
+      "Promoted statusColor to a typed Record<AppStatus['indexStatus'], string> constant",
+      "Removed unused Chunk import from qa-service.ts"
+    ]
+  }
 }

@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { Document } from '../shared/types';
+import { Document, DocumentMetadata } from '../shared/types';
 import { PersistenceService } from './persistence-service';
 
 const DOCUMENTS_META = 'documents-meta.json';
@@ -19,7 +19,7 @@ export class DocumentService {
     return docs ?? [];
   }
 
-  /** Import a file from the given path. */
+  /** Import a file from the given path. Extracts metadata from content on import. */
   importDocument(filePath: string): Document {
     if (!fs.existsSync(filePath)) {
       throw new Error(`File not found: ${filePath}`);
@@ -29,6 +29,8 @@ export class DocumentService {
     const content = fs.readFileSync(filePath, 'utf-8');
     const stats = fs.statSync(filePath);
 
+    const metadata = this.extractMetadata(content, filename);
+
     const doc: Document = {
       id: uuidv4(),
       title: filename.replace(/\.[^.]+$/, ''),
@@ -36,6 +38,7 @@ export class DocumentService {
       importedAt: new Date().toISOString(),
       size: stats.size,
       status: 'imported',
+      metadata,
     };
 
     // Copy file to data directory
@@ -74,7 +77,7 @@ export class DocumentService {
     return docs[index];
   }
 
-  /** Delete a document by ID. Removes content and metadata. */
+  /** Delete a document by ID. Removes content, chunks, and metadata. */
   deleteDocument(id: string): boolean {
     const docs = this.listDocuments();
     const doc = docs.find(d => d.id === id);
@@ -89,6 +92,12 @@ export class DocumentService {
       fs.unlinkSync(contentPath);
     }
 
+    // Remove chunks if they exist
+    const chunksPath = path.join(this.persistence.getDataDir(), 'chunks', `${id}.json`);
+    if (fs.existsSync(chunksPath)) {
+      fs.unlinkSync(chunksPath);
+    }
+
     // Update metadata
     const updated = docs.filter(d => d.id !== id);
     this.persistence.writeJson(DOCUMENTS_META, updated);
@@ -98,5 +107,21 @@ export class DocumentService {
   /** Check whether the persistence layer has stored data. */
   hasPersistedData(): boolean {
     return this.persistence.exists(DOCUMENTS_META);
+  }
+
+  /** Extract metadata from raw document content. */
+  extractMetadata(content: string, filename: string): DocumentMetadata {
+    const lines = content.split('\n');
+    const words = content.split(/\s+/).filter(w => w.length > 0);
+    const paragraphs = content.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+    const ext = path.extname(filename).toLowerCase();
+
+    return {
+      wordCount: words.length,
+      lineCount: lines.length,
+      fileType: ext === '.md' ? 'markdown' : 'plaintext',
+      paragraphCount: paragraphs.length,
+      charCount: content.length,
+    };
   }
 }
