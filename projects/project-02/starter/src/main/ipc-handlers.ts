@@ -26,6 +26,10 @@ export function registerIpcHandlers(ipcMain: IpcMain, services: Services) {
     return documentService.getDocument(id);
   });
 
+  ipcMain.handle(IPC_CHANNELS.GET_DOCUMENT_CONTENT, async (_event, id: string) => {
+    return documentService.getDocumentContent(id);
+  });
+
   ipcMain.handle(IPC_CHANNELS.DELETE_DOCUMENT, async (_event, id: string) => {
     return documentService.deleteDocument(id);
   });

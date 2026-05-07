@@ -37,26 +37,26 @@
     {
       "id": "document-import",
       "name": "Document Import",
-      "description": "Users can import .txt and .md files via ImportPanel with file picker",
-      "status": "not-started",
-      "evidence": null,
-      "testedAt": null
+      "description": "Users can import .txt and .md files via native file dialog (documents:pick-file -> documents:import)",
+      "status": "pass",
+      "evidence": "Verified end-to-end via npm run dev on Windows / Electron 33: '+ Import' button opens native file dialog filtered to .txt/.md, selecting a file appends it to the sidebar (Documents count increments) and auto-selects it. Confirmed by user with two imports (PRODUCT.md, ARCHITECTURE.md) shown in the sidebar. Type-check and build also pass.",
+      "testedAt": "2026-05-07T00:00:00Z"
     },
     {
       "id": "document-detail",
       "name": "Document Detail with Content",
-      "description": "DocumentDetail shows full document content, metadata, and delete button",
-      "status": "not-started",
-      "evidence": null,
-      "testedAt": null
+      "description": "DocumentDetail shows full document content (preserved newlines, scrollable), metadata, and a delete button",
+      "status": "pass",
+      "evidence": "Verified end-to-end via npm run dev: clicking a document in the sidebar renders title, filename, importedAt, size, status, and the full markdown content with preserved newlines in a scrollable container (maxHeight 420px, overflow auto). Delete button visible and functional. Confirmed visually with ARCHITECTURE.md selected.",
+      "testedAt": "2026-05-07T00:00:00Z"
     },
     {
       "id": "basic-persistence",
       "name": "Basic Persistence",
-      "description": "Imported documents persist across app restarts via filesystem storage",
-      "status": "not-started",
-      "evidence": null,
-      "testedAt": null
+      "description": "Imported documents persist across app restarts via filesystem storage; deletes remove all related files so deleted documents do not reappear",
+      "status": "pass",
+      "evidence": "Verified end-to-end via npm run dev: after importing documents, closing the app, and relaunching, the sidebar list and per-document content are restored from documents-meta.json + content/{id}.txt. After clicking Delete on a document and restarting, the deleted document does not reappear (DocumentService.deleteDocument removes the meta entry plus content/{id}.txt and chunks/{id}.json via PersistenceService.deleteFile). Full TASK.md 5-step acceptance path confirmed by user.",
+      "testedAt": "2026-05-07T00:00:00Z"
     }
   ]
 }

@@ -1,10 +1,11 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import * as path from 'path';
 import { registerIpcHandlers } from './ipc-handlers';
 import { DocumentService } from '../services/document-service';
 import { QaService } from '../services/qa-service';
 import { IndexingService } from '../services/indexing-service';
 import { PersistenceService } from '../services/persistence-service';
+import { IPC_CHANNELS } from '../shared/types';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -18,6 +19,7 @@ function createWindow() {
       preload: path.join(__dirname, '..', 'preload', 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: false,
     },
     title: 'Knowledge Base',
   });
@@ -46,6 +48,20 @@ function initializeServices() {
     documentService,
     indexingService,
     qaService,
+  });
+
+  ipcMain.handle(IPC_CHANNELS.PICK_DOCUMENT_FILE, async () => {
+    const target = mainWindow ?? BrowserWindow.getFocusedWindow();
+    const options: Electron.OpenDialogOptions = {
+      title: 'Import document',
+      properties: ['openFile'],
+      filters: [{ name: 'Text & Markdown', extensions: ['txt', 'md'] }],
+    };
+    const result = target
+      ? await dialog.showOpenDialog(target, options)
+      : await dialog.showOpenDialog(options);
+    if (result.canceled || result.filePaths.length === 0) return null;
+    return result.filePaths[0];
   });
 }
 

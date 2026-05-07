@@ -65,6 +65,14 @@ export class PersistenceService {
     }
   }
 
+  /** Delete an arbitrary file relative to the data directory. */
+  deleteFile(relativePath: string): void {
+    const fullPath = path.join(this.dataDir, relativePath);
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+    }
+  }
+
   /** List all files in a directory. */
   listFiles(relativePath: string): string[] {
     const fullPath = path.join(this.dataDir, relativePath);

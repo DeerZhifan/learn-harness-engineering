@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Document, Chunk } from '../../../shared/types';
+import { useEffect, useState } from 'react';
+import { Document, Chunk } from '../../shared/types';
 
 interface Props {
   document: Document;
@@ -10,13 +10,30 @@ export function DocumentDetail({ document, onDelete }: Props) {
   const [chunks, setChunks] = useState<Chunk[]>([]);
   const [showChunks, setShowChunks] = useState(false);
   const [content, setContent] = useState<string | null>(null);
+  const [contentError, setContentError] = useState<string | null>(null);
 
   useEffect(() => {
     window.knowledgeBase.indexing.chunks(document.id).then(setChunks);
   }, [document.id]);
 
-  // TODO: Load document content for viewing -- not yet implemented
-  // This is part of the document-detail feature to be completed.
+  useEffect(() => {
+    let cancelled = false;
+    setContent(null);
+    setContentError(null);
+    window.knowledgeBase.documents
+      .getContent(document.id)
+      .then(text => {
+        if (cancelled) return;
+        setContent(text ?? '');
+      })
+      .catch(err => {
+        if (cancelled) return;
+        setContentError(err instanceof Error ? err.message : 'Failed to load content');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [document.id]);
 
   return (
     <div>
@@ -80,23 +97,29 @@ export function DocumentDetail({ document, onDelete }: Props) {
         )}
       </div>
 
-      {/* Content viewer -- placeholder until document-detail feature is implemented */}
-      {content && (
-        <div style={{
-          padding: '16px',
-          background: '#1a1a3e',
-          borderRadius: '6px',
-          border: '1px solid #0f3460',
-          fontSize: '13px',
-          lineHeight: 1.6,
-          whiteSpace: 'pre-wrap',
-        }}>
-          {content}
-        </div>
-      )}
+      <div style={{
+        padding: '16px',
+        background: '#1a1a3e',
+        borderRadius: '6px',
+        border: '1px solid #0f3460',
+        fontSize: '13px',
+        lineHeight: 1.6,
+        whiteSpace: 'pre-wrap',
+        maxHeight: '420px',
+        overflow: 'auto',
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+      }}>
+        {contentError
+          ? <span style={{ color: '#ff8888' }}>Failed to load content: {contentError}</span>
+          : content === null
+            ? <span style={{ color: '#666' }}>Loading content...</span>
+            : content === ''
+              ? <span style={{ color: '#666' }}>(empty document)</span>
+              : content}
+      </div>
 
       {showChunks && (
-        <div>
+        <div style={{ marginTop: '16px' }}>
           {chunks.map(chunk => (
             <div
               key={chunk.id}

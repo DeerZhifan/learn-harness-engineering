@@ -1,32 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { DocumentList } from './components/DocumentList';
 import { QuestionPanel } from './components/QuestionPanel';
 import { DocumentDetail } from './components/DocumentDetail';
-import { ImportPanel } from './components/ImportPanel';
 import { StatusBar } from './components/StatusBar';
-import { Document, AppStatus, QAResponse } from '../../shared/types';
-
-declare global {
-  interface Window {
-    knowledgeBase: {
-      documents: {
-        list: () => Promise<Document[]>;
-        import: (filePath: string) => Promise<Document>;
-        get: (id: string) => Promise<Document | null>;
-        delete: (id: string) => Promise<boolean>;
-      };
-      indexing: {
-        start: (documentId?: string) => Promise<{ status: string }>;
-        status: () => Promise<AppStatus>;
-        chunks: (documentId: string) => Promise<Array<{ id: string; content: string; index: number }>>;
-      };
-      qa: {
-        ask: (question: string) => Promise<QAResponse>;
-        history: () => Promise<Array<{ question: string; response: QAResponse }>>;
-      };
-    };
-  }
-}
+import { Document, AppStatus, QAResponse, Citation } from '../shared/types';
 
 export function App() {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -37,7 +14,7 @@ export function App() {
     lastActivity: '',
   });
   const [lastResponse, setLastResponse] = useState<QAResponse | null>(null);
-  const [showImport, setShowImport] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
 
   const refreshDocuments = useCallback(async () => {
     try {
@@ -50,13 +27,21 @@ export function App() {
     }
   }, []);
 
-  const handleImport = useCallback(async (filePath: string) => {
+  useEffect(() => {
+    refreshDocuments();
+  }, [refreshDocuments]);
+
+  const handleImportClick = useCallback(async () => {
+    setImportError(null);
     try {
-      await window.knowledgeBase.documents.import(filePath);
+      const filePath = await window.knowledgeBase.documents.pickFile();
+      if (!filePath) return;
+      const doc = await window.knowledgeBase.documents.import(filePath);
       await refreshDocuments();
-      setShowImport(false);
+      setSelectedDoc(doc);
     } catch (err) {
       console.error('Import failed:', err);
+      setImportError(err instanceof Error ? err.message : 'Import failed');
     }
   }, [refreshDocuments]);
 
@@ -132,7 +117,7 @@ export function App() {
               Documents ({documents.length})
             </span>
             <button
-              onClick={() => setShowImport(!showImport)}
+              onClick={handleImportClick}
               style={{
                 padding: '4px 10px',
                 background: '#533483',
@@ -146,6 +131,16 @@ export function App() {
               + Import
             </button>
           </div>
+          {importError && (
+            <div style={{
+              padding: '8px 16px',
+              fontSize: '11px',
+              color: '#ff8888',
+              borderBottom: '1px solid #0f3460',
+            }}>
+              {importError}
+            </div>
+          )}
           <DocumentList
             documents={documents}
             onSelect={handleSelectDocument}
@@ -153,12 +148,10 @@ export function App() {
           />
         </div>
 
-        {/* Right panel: Import, Document detail + Q&A */}
+        {/* Right panel: Document detail + Q&A */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
-            {showImport ? (
-              <ImportPanel onImport={handleImport} />
-            ) : selectedDoc ? (
+            {selectedDoc ? (
               <DocumentDetail
                 document={selectedDoc}
                 onDelete={handleDeleteDocument}
@@ -180,7 +173,7 @@ export function App() {
                 {lastResponse.citations.length > 0 && (
                   <div style={{ marginTop: '10px', fontSize: '12px', color: '#8888bb' }}>
                     <strong>Citations:</strong>
-                    {lastResponse.citations.map((c, i) => (
+                    {lastResponse.citations.map((c: Citation, i: number) => (
                       <div key={i} style={{ marginTop: '4px', paddingLeft: '8px', borderLeft: '2px solid #533483' }}>
                         {c.documentTitle} (chunk {c.chunkIndex}): {c.excerpt.substring(0, 100)}...
                       </div>

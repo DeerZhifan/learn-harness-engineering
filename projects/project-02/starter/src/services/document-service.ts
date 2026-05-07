@@ -81,6 +81,8 @@ export class DocumentService {
     if (!doc) return false;
 
     this.persistence.deleteFromDocuments(doc.filename);
+    this.persistence.deleteFile(`content/${doc.id}.txt`);
+    this.persistence.deleteFile(`chunks/${doc.id}.json`);
 
     const updated = docs.filter(d => d.id !== id);
     this.persistence.writeJson(DOCUMENTS_META, updated);

@@ -10,7 +10,7 @@ The Knowledge Base is an Electron desktop application built with TypeScript and 
 +-----------------------------------------------------------+
 |                     Renderer (React)                       |
 |  App.tsx -> DocumentList, DocumentDetail, QuestionPanel,  |
-|             StatusBar, ImportPanel                         |
+|             StatusBar                                      |
 +-----------------------------------------------------------+
          |  window.knowledgeBase.* (typed IPC bridge)
 +-----------------------------------------------------------+
@@ -49,11 +49,13 @@ The preload script runs in the renderer context before any page scripts load. It
 
 ```typescript
 window.knowledgeBase = {
-  documents: { list, import, get, delete },
-  indexing:   { start, status, chunks },
-  qa:         { ask, history },
+  documents: { list, import, get, getContent, pickFile, delete },
+  indexing:  { start, status, chunks },
+  qa:        { ask, history },
 }
 ```
+
+`pickFile` triggers a main-process native file dialog (`dialog.showOpenDialog` with a `.txt` / `.md` filter) and returns the chosen absolute path or `null`; the renderer then passes that path to `documents.import`. `getContent` returns the full text body for a given document id (used by `DocumentDetail`).
 
 **Key invariant**: The preload bridge is the only communication channel between renderer and main. No Node.js modules are accessible from the renderer.
 
@@ -61,12 +63,13 @@ window.knowledgeBase = {
 
 The renderer is a React 18 application bundled by Vite. Components:
 
-- `App.tsx` -- Root layout with header, sidebar, main panel, and status bar.
+- `App.tsx` -- Root layout with header, sidebar, main panel, and status bar. Owns the import flow: the "+ Import" button calls `documents.pickFile()` -> `documents.import(filePath)` -> `refreshDocuments()` and auto-selects the new document.
 - `DocumentList` -- Sidebar listing of imported documents.
-- `DocumentDetail` -- Shows document metadata, chunks, and indexing controls.
-- `ImportPanel` -- File input for importing .txt and .md documents.
+- `DocumentDetail` -- Shows document metadata, full content (loaded via `documents.getContent`, rendered with preserved newlines and a scrollable container), chunks, indexing controls, and the delete button.
 - `QuestionPanel` -- Text input for asking questions.
 - `StatusBar` -- Shows index status and document count.
+
+There is no `ImportPanel` component: the renderer never sees raw `<input type="file">` — `File.path` is unavailable under modern Electron + `contextIsolation`, and a main-process dialog is the supported path.
 
 **Key invariant**: Renderer code never imports `fs`, `path`, `electron`, or any Node.js module.
 
@@ -75,7 +78,7 @@ The renderer is a React 18 application bundled by Vite. Components:
 Business logic classes running in the main process:
 
 - `PersistenceService` -- Low-level JSON/text file I/O with atomic writes.
-- `DocumentService` -- Document CRUD operations (import, list, get, update, delete).
+- `DocumentService` -- Document CRUD operations (import, list, get, getContent, update, delete). `delete` removes the metadata entry **and** the corresponding `content/<id>.txt` and `chunks/<id>.json` files so deleted documents cannot reappear after restart.
 - `IndexingService` -- Paragraph-aware chunking (~500 chars per chunk) and index management.
 - `QaService` -- Mock question answering with keyword-based retrieval and citation generation.
 
