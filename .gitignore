@@ -27,3 +27,8 @@ docs/.vitepress/cache/
 docs/.vitepress/dist/
 *.tsbuildinfo
 artifacts/
+**/dist/
+
+# Claude Code session state
+/.claude/
+**/.claude/
