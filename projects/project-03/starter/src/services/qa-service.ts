@@ -1,4 +1,4 @@
-import { QAResponse, QAHistory, Citation, Chunk } from '../shared/types';
+import { QAResponse, QAHistory, Citation } from '../shared/types';
 import { PersistenceService } from './persistence-service';
 import { IndexingService } from './indexing-service';
 
@@ -35,15 +35,25 @@ const MOCK_PATTERNS: Array<{
     answer: 'The meeting summary indicates that the team discussed implementing a retrieval-augmented generation pipeline. Key decisions included using local chunk storage and citation-based verification to ensure answer accuracy.',
     excerpt: 'The team discussed implementing a retrieval-augmented generation pipeline',
   },
+  {
+    keywords: ['metadata', 'word', 'count', 'line'],
+    answer: 'On import, the system extracts metadata including word count, line count, character count, file type, and paragraph count. This metadata is stored with the document and displayed in the detail view.',
+    excerpt: 'On import, the system extracts metadata',
+  },
+  {
+    keywords: ['confidence', 'score', 'citation'],
+    answer: 'Answers include a confidence score: 0.85 when citations are found, 0.30 when no citations are available. This allows the UI to visually distinguish between well-grounded and speculative answers.',
+    excerpt: 'Answers include a confidence score',
+  },
 ];
 
 export class QaService {
   private persistence: PersistenceService;
   private indexingService: IndexingService;
 
-  constructor(persistence: PersistenceService, indexingService?: IndexingService) {
+  constructor(persistence: PersistenceService, indexingService: IndexingService) {
     this.persistence = persistence;
-    this.indexingService = indexingService ?? new IndexingService(persistence);
+    this.indexingService = indexingService;
   }
 
   /** Ask a question and get a grounded answer with citations. */

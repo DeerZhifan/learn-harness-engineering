@@ -2,6 +2,12 @@ temp/
 node_modules/
 coverage/
 
+# package manager lockfiles
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+npm-shrinkwrap.json
+
 # macOS / editor noise
 .DS_Store
 *.swp

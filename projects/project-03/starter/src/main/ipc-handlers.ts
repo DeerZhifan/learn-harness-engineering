@@ -41,7 +41,7 @@ export function registerIpcHandlers(ipcMain: IpcMain, services: Services) {
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_INDEXING_STATUS, async () => {
-    return indexingService.getStatus();
+    return indexingService.getAppStatus();
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_CHUNKS, async (_event, documentId: string) => {

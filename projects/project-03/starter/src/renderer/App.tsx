@@ -13,12 +13,13 @@ declare global {
         list: () => Promise<Document[]>;
         import: (filePath: string) => Promise<Document>;
         get: (id: string) => Promise<Document | null>;
+        getContent: (id: string) => Promise<string | null>;
         delete: (id: string) => Promise<boolean>;
       };
       indexing: {
-        start: (documentId?: string) => Promise<{ status: string }>;
+        start: (documentId?: string) => Promise<AppStatus>;
         status: () => Promise<AppStatus>;
-        chunks: (documentId: string) => Promise<Array<{ id: string; content: string; index: number }>>;
+        chunks: (documentId: string) => Promise<Array<{ id: string; content: string; index: number; metadata: Record<string, string> }>>;
       };
       qa: {
         ask: (question: string) => Promise<QAResponse>;
@@ -35,6 +36,8 @@ export function App() {
     documentsLoaded: 0,
     indexStatus: 'idle',
     lastActivity: '',
+    indexedCount: 0,
+    totalChunks: 0,
   });
   const [lastResponse, setLastResponse] = useState<QAResponse | null>(null);
   const [showImport, setShowImport] = useState(false);
@@ -89,6 +92,19 @@ export function App() {
       console.error('Delete failed:', err);
     }
   }, [selectedDoc, refreshDocuments]);
+
+  const handleIndexDocument = useCallback(async (documentId: string) => {
+    try {
+      await window.knowledgeBase.indexing.start(documentId);
+      await refreshDocuments();
+      const updated = await window.knowledgeBase.documents.get(documentId);
+      if (updated) {
+        setSelectedDoc(updated);
+      }
+    } catch (err) {
+      console.error('Indexing failed:', err);
+    }
+  }, [refreshDocuments]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -167,6 +183,7 @@ export function App() {
               <DocumentDetail
                 document={selectedDoc}
                 onDelete={handleDeleteDocument}
+                onIndex={handleIndexDocument}
               />
             ) : (
               <div style={{ color: '#666', textAlign: 'center', paddingTop: '40px' }}>
@@ -181,6 +198,18 @@ export function App() {
                 borderRadius: '6px',
                 border: '1px solid #0f3460',
               }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '14px', fontWeight: 600 }}>Answer</span>
+                  <span style={{
+                    fontSize: '11px',
+                    padding: '2px 8px',
+                    borderRadius: '10px',
+                    background: lastResponse.confidence >= 0.8 ? '#2d5a2d' : '#5a4a2d',
+                    color: lastResponse.confidence >= 0.8 ? '#5cb85c' : '#f0ad4e',
+                  }}>
+                    Confidence: {Math.round(lastResponse.confidence * 100)}%
+                  </span>
+                </div>
                 <div style={{ fontSize: '14px', lineHeight: 1.6 }}>{lastResponse.answer}</div>
                 {lastResponse.citations.length > 0 && (
                   <div style={{ marginTop: '10px', fontSize: '12px', color: '#8888bb' }}>

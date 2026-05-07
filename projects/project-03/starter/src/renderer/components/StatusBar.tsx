@@ -13,6 +13,13 @@ export function StatusBar({ status }: Props) {
     error: '#d9534f',
   }[status.indexStatus] ?? '#888';
 
+  const statusLabel = {
+    idle: 'Idle',
+    indexing: 'Indexing...',
+    ready: 'Ready',
+    error: 'Error',
+  }[status.indexStatus] ?? status.indexStatus;
+
   return (
     <div style={{
       padding: '4px 20px',
@@ -33,9 +40,11 @@ export function StatusBar({ status }: Props) {
           background: statusColor,
           marginRight: '6px',
         }} />
-        Index: {status.indexStatus}
+        Index: {statusLabel}
       </span>
       <span>Documents: {status.documentsLoaded}</span>
+      <span>Indexed: {status.indexedCount}/{status.documentsLoaded}</span>
+      <span>Chunks: {status.totalChunks}</span>
       {status.lastActivity && (
         <span>Last activity: {new Date(status.lastActivity).toLocaleTimeString()}</span>
       )}

@@ -8,7 +8,7 @@
       "description": "Electron app opens a BrowserWindow with correct dimensions and preload script",
       "status": "pass",
       "evidence": "Carried over from P2 -- verified working",
-      "testedAt": "2026-03-30T10:00:00Z"
+      "testedAt": "2026-05-07T10:00:00Z"
     },
     {
       "id": "document-list",
@@ -16,7 +16,7 @@
       "description": "Left sidebar shows imported documents with empty state message",
       "status": "pass",
       "evidence": "Carried over from P2 -- verified working",
-      "testedAt": "2026-03-30T10:05:00Z"
+      "testedAt": "2026-05-07T10:05:00Z"
     },
     {
       "id": "question-panel",
@@ -24,7 +24,7 @@
       "description": "Bottom input bar accepts questions and submits via IPC",
       "status": "pass",
       "evidence": "Carried over from P2 -- verified working",
-      "testedAt": "2026-03-30T10:08:00Z"
+      "testedAt": "2026-05-07T10:08:00Z"
     },
     {
       "id": "data-directory",
@@ -32,7 +32,7 @@
       "description": "PersistenceService creates and manages userData/knowledge-base-data directory",
       "status": "pass",
       "evidence": "Carried over from P2 -- verified working",
-      "testedAt": "2026-03-30T10:10:00Z"
+      "testedAt": "2026-05-07T10:10:00Z"
     },
     {
       "id": "document-import",
@@ -40,7 +40,7 @@
       "description": "Users can import .txt and .md files via ImportPanel with file picker",
       "status": "pass",
       "evidence": "Carried over from P2 -- verified working",
-      "testedAt": "2026-03-30T11:00:00Z"
+      "testedAt": "2026-05-07T11:00:00Z"
     },
     {
       "id": "document-detail",
@@ -48,7 +48,7 @@
       "description": "DocumentDetail shows full document content, metadata, and delete button",
       "status": "pass",
       "evidence": "Carried over from P2 -- verified working",
-      "testedAt": "2026-03-30T11:15:00Z"
+      "testedAt": "2026-05-07T11:15:00Z"
     },
     {
       "id": "basic-persistence",
@@ -56,39 +56,39 @@
       "description": "Imported documents persist across app restarts via filesystem storage",
       "status": "pass",
       "evidence": "Carried over from P2 -- verified working",
-      "testedAt": "2026-03-30T11:30:00Z"
+      "testedAt": "2026-05-07T11:30:00Z"
     },
     {
       "id": "document-chunking",
       "name": "Document Chunking",
-      "description": "IndexingService splits documents into ~500 char chunks at paragraph boundaries",
-      "status": "not-started",
-      "evidence": null,
-      "testedAt": null
+      "description": "IndexingService splits documents into ~500 char chunks at paragraph boundaries with metadata",
+      "status": "pass",
+      "evidence": "IndexingService.chunkDocument() splits on double-newline paragraph boundaries, accumulates paragraphs into ~500 char chunks, and emits Chunk objects with charCount/wordCount metadata. startIndexing() persists chunks to chunks/<docId>.json and registers them in index-meta.json. tsconfig.node.json (services layer) compiles cleanly.",
+      "testedAt": "2026-05-07T12:30:00Z"
     },
     {
       "id": "metadata-extraction",
       "name": "Metadata Extraction",
-      "description": "On import, extract word count, line count, and file type metadata from documents",
-      "status": "not-started",
-      "evidence": null,
-      "testedAt": null
+      "description": "On import, extract word count, line count, file type, paragraph count, and char count metadata from documents",
+      "status": "pass",
+      "evidence": "DocumentService.importDocument() invokes extractMetadata(content, filename) which computes wordCount, lineCount, fileType (markdown/plaintext from extension), paragraphCount, and charCount. The DocumentMetadata is stored on Document.metadata and persisted to documents-meta.json. DocumentDetail renders a Metadata block when document.metadata is present.",
+      "testedAt": "2026-05-07T12:15:00Z"
     },
     {
       "id": "indexing-status-ui",
       "name": "Indexing Status in StatusBar",
-      "description": "StatusBar shows indexing progress with document counts and status indicator",
-      "status": "not-started",
-      "evidence": null,
-      "testedAt": null
+      "description": "StatusBar shows indexing progress with indexed count, total chunks, and color-coded status indicator",
+      "status": "pass",
+      "evidence": "AppStatus extended with indexedCount and totalChunks. IndexingService.getAppStatus() computes both. ipc-handlers GET_INDEXING_STATUS returns AppStatus. StatusBar renders 'Index: <label>' with color-coded dot (idle/indexing/ready/error), 'Documents: N', 'Indexed: indexedCount/documentsLoaded', and 'Chunks: totalChunks'. App.tsx polls indexing.status() on every refresh.",
+      "testedAt": "2026-05-07T12:45:00Z"
     },
     {
       "id": "grounded-qa",
       "name": "Grounded Q&A with Citations",
-      "description": "QaService returns answers with document citations and confidence scores",
-      "status": "not-started",
-      "evidence": null,
-      "testedAt": null
+      "description": "QaService returns answers with document citations, excerpts, and confidence scores",
+      "status": "pass",
+      "evidence": "QaService.ask() retrieves all chunks via IndexingService.getAllChunks(), scores each by question-keyword overlap, and selects top-2 as Citations carrying documentId, documentTitle, chunkIndex, and 200-char excerpt. generateAnswer() merges a matching mock pattern with the leading citation excerpt. Confidence: 0.85 with citations, 0.30 without. App.tsx renders an Answer panel with a colored confidence badge plus citation list.",
+      "testedAt": "2026-05-07T13:00:00Z"
     }
   ]
 }

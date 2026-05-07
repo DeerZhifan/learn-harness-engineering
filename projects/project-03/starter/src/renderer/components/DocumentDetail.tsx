@@ -4,9 +4,10 @@ import { Document, Chunk } from '../../../shared/types';
 interface Props {
   document: Document;
   onDelete?: (id: string) => void;
+  onIndex?: (id: string) => void;
 }
 
-export function DocumentDetail({ document, onDelete }: Props) {
+export function DocumentDetail({ document, onDelete, onIndex }: Props) {
   const [chunks, setChunks] = useState<Chunk[]>([]);
   const [showChunks, setShowChunks] = useState(false);
   const [content, setContent] = useState<string | null>(null);
@@ -17,7 +18,6 @@ export function DocumentDetail({ document, onDelete }: Props) {
     window.knowledgeBase.indexing.chunks(document.id).then(setChunks);
   }, [document.id]);
 
-  // Load document content when requested
   const loadContent = async () => {
     if (content) {
       setShowContent(!showContent);
@@ -35,18 +35,44 @@ export function DocumentDetail({ document, onDelete }: Props) {
     }
   };
 
+  const handleIndex = () => {
+    if (onIndex) {
+      onIndex(document.id);
+    }
+  };
+
   return (
     <div>
       <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>
         {document.title}
       </h2>
-      <div style={{ fontSize: '13px', color: '#888', marginBottom: '16px' }}>
+
+      <div style={{ fontSize: '13px', color: '#888', marginBottom: '8px' }}>
         <div>Filename: {document.filename}</div>
         <div>Imported: {new Date(document.importedAt).toLocaleString()}</div>
         <div>Size: {(document.size / 1024).toFixed(1)} KB</div>
-        <div>Status: {document.status}</div>
+        <div>Status: <span style={{ color: document.status === 'indexed' ? '#5cb85c' : '#f0ad4e' }}>{document.status}</span></div>
         {document.chunks !== undefined && <div>Chunks: {document.chunks}</div>}
       </div>
+
+      {document.metadata && (
+        <div style={{
+          fontSize: '12px',
+          color: '#a0a0c0',
+          marginBottom: '16px',
+          padding: '10px 12px',
+          background: '#1a1a3e',
+          borderRadius: '4px',
+          border: '1px solid #0f3460',
+        }}>
+          <div style={{ fontWeight: 500, marginBottom: '4px', color: '#c0c0e0' }}>Metadata</div>
+          <MetadataRow label="File Type" value={document.metadata.fileType} />
+          <MetadataRow label="Words" value={String(document.metadata.wordCount)} />
+          <MetadataRow label="Lines" value={String(document.metadata.lineCount)} />
+          <MetadataRow label="Paragraphs" value={String(document.metadata.paragraphCount)} />
+          <MetadataRow label="Characters" value={String(document.metadata.charCount)} />
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
         <button
@@ -80,7 +106,7 @@ export function DocumentDetail({ document, onDelete }: Props) {
         </button>
         {document.status !== 'indexed' && (
           <button
-            onClick={() => window.knowledgeBase.indexing.start(document.id)}
+            onClick={handleIndex}
             style={{
               padding: '6px 12px',
               background: '#533483',
@@ -112,7 +138,6 @@ export function DocumentDetail({ document, onDelete }: Props) {
         )}
       </div>
 
-      {/* Document content viewer */}
       {showContent && content && (
         <div style={{
           padding: '16px',
@@ -146,13 +171,22 @@ export function DocumentDetail({ document, onDelete }: Props) {
               }}
             >
               <div style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>
-                Chunk {chunk.index} ({chunk.metadata.charCount} chars)
+                Chunk {chunk.index} ({chunk.metadata.charCount} chars, {chunk.metadata.wordCount} words)
               </div>
               {chunk.content}
             </div>
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function MetadataRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ display: 'flex', gap: '8px' }}>
+      <span style={{ color: '#888', minWidth: '80px' }}>{label}:</span>
+      <span>{value}</span>
     </div>
   );
 }
