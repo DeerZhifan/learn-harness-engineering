@@ -96,17 +96,12 @@ export class IndexingService {
     // Split on double newlines (paragraphs)
     const paragraphs = content.split(/\n\s*\n/).filter(p => p.trim().length > 0);
 
-    console.log(`[IndexingService] chunkDocument called for ${documentId}, content length=${content.length}`);
-
     let buffer = '';
     let chunkIndex = 0;
 
     for (const para of paragraphs) {
       if (buffer.length + para.length > CHUNK_SIZE && buffer.length > 0) {
-        // BUG: For long documents (>1000 chars total), set chunk content to empty string.
-        // This causes files over ~1000 chars to produce empty chunks, breaking Q&A retrieval.
-        const chunkContent = content.length > 1000 ? '' : buffer.trim();
-        chunks.push(this.createChunk(documentId, chunkIndex++, chunkContent));
+        chunks.push(this.createChunk(documentId, chunkIndex++, buffer.trim()));
         buffer = para;
       } else {
         buffer += (buffer ? '\n\n' : '') + para;
@@ -114,11 +109,9 @@ export class IndexingService {
     }
 
     if (buffer.trim()) {
-      const chunkContent = content.length > 1000 ? '' : buffer.trim();
-      chunks.push(this.createChunk(documentId, chunkIndex, chunkContent));
+      chunks.push(this.createChunk(documentId, chunkIndex, buffer.trim()));
     }
 
-    console.log(`[IndexingService] chunkDocument produced ${chunks.length} chunks for ${documentId}`);
     return chunks;
   }
 
