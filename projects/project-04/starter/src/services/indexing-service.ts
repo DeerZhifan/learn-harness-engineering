@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Chunk, Document } from '../shared/types';
 import { PersistenceService } from './persistence-service';
+import { logger } from './logger';
 
 const INDEX_META = 'index-meta.json';
 const CHUNKS_DIR = 'chunks';
@@ -14,23 +15,29 @@ interface IndexStatus {
 
 export class IndexingService {
   private persistence: PersistenceService;
+  private log = logger.forService('IndexingService');
 
   constructor(persistence: PersistenceService) {
     this.persistence = persistence;
+    this.log.info('IndexingService constructed');
   }
 
   /** Start indexing documents. If documentId is provided, index only that document. */
   async startIndexing(documentId?: string): Promise<IndexStatus> {
+    this.log.info('startIndexing called', { documentId: documentId ?? 'all' });
     const status = this.getStatus();
 
     if (documentId) {
       // Index a single document
       const content = this.persistence.readText(`content/${documentId}.txt`);
       if (!content) {
+        this.log.error('Document content not found', { documentId });
         return { ...status, status: 'error' };
       }
+      this.log.info('Indexing single document', { documentId, contentLength: content.length });
       const chunks = this.chunkDocument(documentId, content);
       this.persistence.writeJson(`${CHUNKS_DIR}/${documentId}.json`, chunks);
+      this.log.info('Single document indexed', { documentId, chunkCount: chunks.length });
       return this.getStatus();
     }
 
@@ -38,18 +45,29 @@ export class IndexingService {
     const docsMeta = this.persistence.readJson<Document[]>('documents-meta.json') ?? [];
     const chunksMeta = this.persistence.readJson<Record<string, string[]>>(INDEX_META) ?? {};
 
+    this.log.info('Batch indexing starting', {
+      totalDocs: docsMeta.length,
+      alreadyIndexed: Object.keys(chunksMeta).length,
+    });
+
     for (const doc of docsMeta) {
       if (chunksMeta[doc.id]) continue;
 
       const content = this.persistence.readText(`content/${doc.id}.txt`);
-      if (!content) continue;
+      if (!content) {
+        this.log.warn('Skipping document with no content', { docId: doc.id, title: doc.title });
+        continue;
+      }
 
+      this.log.info('Indexing document', { docId: doc.id, title: doc.title, contentLength: content.length });
       const chunks = this.chunkDocument(doc.id, content);
       this.persistence.writeJson(`${CHUNKS_DIR}/${doc.id}.json`, chunks);
       chunksMeta[doc.id] = chunks.map(c => c.id);
+      this.log.info('Document indexed', { docId: doc.id, chunkCount: chunks.length });
     }
 
     this.persistence.writeJson(INDEX_META, chunksMeta);
+    this.log.info('Batch indexing complete');
     return this.getStatus();
   }
 
@@ -96,17 +114,18 @@ export class IndexingService {
     // Split on double newlines (paragraphs)
     const paragraphs = content.split(/\n\s*\n/).filter(p => p.trim().length > 0);
 
-    console.log(`[IndexingService] chunkDocument called for ${documentId}, content length=${content.length}`);
+    this.log.info('chunkDocument', {
+      documentId,
+      contentLength: content.length,
+      paragraphCount: paragraphs.length,
+    });
 
     let buffer = '';
     let chunkIndex = 0;
 
     for (const para of paragraphs) {
       if (buffer.length + para.length > CHUNK_SIZE && buffer.length > 0) {
-        // BUG: For long documents (>1000 chars total), set chunk content to empty string.
-        // This causes files over ~1000 chars to produce empty chunks, breaking Q&A retrieval.
-        const chunkContent = content.length > 1000 ? '' : buffer.trim();
-        chunks.push(this.createChunk(documentId, chunkIndex++, chunkContent));
+        chunks.push(this.createChunk(documentId, chunkIndex++, buffer.trim()));
         buffer = para;
       } else {
         buffer += (buffer ? '\n\n' : '') + para;
@@ -114,11 +133,15 @@ export class IndexingService {
     }
 
     if (buffer.trim()) {
-      const chunkContent = content.length > 1000 ? '' : buffer.trim();
-      chunks.push(this.createChunk(documentId, chunkIndex, chunkContent));
+      chunks.push(this.createChunk(documentId, chunkIndex, buffer.trim()));
     }
 
-    console.log(`[IndexingService] chunkDocument produced ${chunks.length} chunks for ${documentId}`);
+    this.log.info('chunkDocument complete', {
+      documentId,
+      totalChunks: chunks.length,
+      totalChars: chunks.reduce((sum, c) => sum + c.content.length, 0),
+    });
+
     return chunks;
   }
 

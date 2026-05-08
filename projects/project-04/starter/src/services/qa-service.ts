@@ -1,6 +1,7 @@
-import { QAResponse, QAHistory, Citation, Chunk } from '../shared/types';
+import { QAResponse, QAHistory, Citation } from '../shared/types';
 import { PersistenceService } from './persistence-service';
 import { IndexingService } from './indexing-service';
+import { logger } from './logger';
 
 const QA_HISTORY_FILE = 'qa-history.json';
 
@@ -40,19 +41,25 @@ const MOCK_PATTERNS: Array<{
 export class QaService {
   private persistence: PersistenceService;
   private indexingService: IndexingService;
+  private log = logger.forService('QaService');
 
   constructor(persistence: PersistenceService, indexingService?: IndexingService) {
     this.persistence = persistence;
     this.indexingService = indexingService ?? new IndexingService(persistence);
+    this.log.info('QaService initialized');
   }
 
   /** Ask a question and get a grounded answer with citations. */
   async ask(question: string): Promise<QAResponse> {
+    this.log.info('Processing question', { question });
+
     // Simulate processing delay
     await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 400));
 
     const chunks = this.indexingService.getAllChunks();
     const citations: Citation[] = [];
+
+    this.log.info('Retrieving from chunks', { totalChunks: chunks.length });
 
     if (chunks.length > 0) {
       // Find relevant chunks using keyword matching
@@ -71,6 +78,11 @@ export class QaService {
         .filter(s => s.score > 0)
         .sort((a, b) => b.score - a.score)
         .slice(0, 2);
+
+      this.log.info('Keyword matching results', {
+        questionWords: questionWords.length,
+        relevantChunks: relevant.length,
+      });
 
       // Get document metadata for citations
       const docs = this.persistence.readJson<Array<{ id: string; title: string }>>('documents-meta.json') ?? [];
@@ -95,6 +107,12 @@ export class QaService {
       confidence: citations.length > 0 ? 0.85 : 0.3,
       timestamp: new Date().toISOString(),
     };
+
+    this.log.info('Q&A response generated', {
+      confidence: response.confidence,
+      citationCount: citations.length,
+      answerLength: answer.length,
+    });
 
     // Save to history
     this.saveToHistory(question, response);
@@ -131,5 +149,6 @@ export class QaService {
     const history = this.getHistory();
     history.push({ question, response });
     this.persistence.writeJson(QA_HISTORY_FILE, history);
+    this.log.info('Question saved to history', { historyLength: history.length });
   }
 }
